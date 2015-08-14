@@ -5,10 +5,11 @@
 
 import pygame
 from pygame.locals import *
-from aliens import *
+from enemies import *
+from random import random
 
-# This main class holds the main game loop as well as all
-# of the basic classes.
+"""This main file holds the main game loop as well as all
+# of the basic classes"""
 
 pygame.init()
 
@@ -17,6 +18,7 @@ BLUE = (0, 0, 255)
 LIGHTER_BLUE = (100, 100, 255)
 BLACK = (0, 0, 0)
 RED = (255, 0, 0)
+LIGHTER_RED = (255, 100, 100)
 
 
 
@@ -47,16 +49,19 @@ def main():
 
 class Game:
 	"""Top of class hierarchy; the godly class."""
+	environment_speed=1
 	def __init__(self, screen):
 		"""Initializes a new Game object."""
 		self.player=Player(self)
 		self.enemies=[]
+		self.init_enemies()
 		self.torpedos=[]
 		self.missiles=[]
 		self.background=Background(self)
 		self.camera=Camera(self, screen, (0,0))
 	def update(self, events):
 		"""Updates game state."""
+		# call all the update methods
 		self.player.update(events)
 		for enemy in self.enemies:
 			enemy.update(events)
@@ -65,6 +70,17 @@ class Game:
 		for missile in self.missiles:
 			missile.update(events)
 		self.background.update(events)
+
+		# delete any stray torpedos/missiles (off screen)
+		for torpedo in self.torpedos:
+			if torpedo.y+Torpedo.height<0: 
+				self.torpedos.remove(torpedo)
+				#print("Torpedo removed.")
+		for missile in self.missiles:
+			if missile.y > screen_dimensions[1]:
+				self.missiles.remove(missile)
+				#print("Missile removed.")
+
 	def draw(self):
 		"""Draws itself on camera."""
 		# order of draws determines layers
@@ -78,17 +94,23 @@ class Game:
 			torpedo.draw(self.camera)
 		pygame.display.update()
 
+	def init_enemies(self):
+		self.enemies.append(Enemy(self, (50, 50)))
+
 class Camera:
-	"""Should be utilized by any game obje that wishes to draw itself"""
+	"""Should be utilized by any game object that wishes to draw itself"""
 	def __init__(self, game, screen, pos):
 		self.game=game
 		self.screen=screen
 		self.pos=pos
 	def blit_surface(self, surface, pos):
+		"""Blits a surface onto its own surface at new coordinates based
+		off given ones and its own."""
 		newx = pos[0] - self.pos[0]
 		newy = pos[1] - self.pos[1]
 		self.screen.blit(surface, (newx, newy))
 	def draw_rect(self, rect, color):
+		"""Just like blit_surface but for pygame.Rect."""
 		new_rect = pygame.Rect(rect.x-self.pos[0], rect.y-self.pos[1], rect.width, rect.height)
 		pygame.draw.rect(self.screen, color, new_rect)
 
@@ -147,13 +169,32 @@ class Player:
 
 class Enemy:
 	"""Generic Enemy"""
+	width=40
+	height=50
 	def __init__(self, game, pos):
 		self.game=game
-		self
+		self.x=pos[0]
+		self.y=pos[1]
+		self.rect=pygame.Rect(self.x, self.y, Enemy.width, Enemy.height)
 	def update(self, events):
-		pass
+		#Update coordinates
+		self.y+=self.game.environment_speed
+		#self.x......
+
+		#update rect
+		self.rect.x=self.x
+		self.rect.y=self.y
+
+		#fire missile.... maybe...
+		if random() > 0.98: self.fire()
+
 	def draw(self, camera):
-		pass
+		camera.draw_rect(self.rect, RED)
+
+	def fire(self):
+		"""FIRE ZE MISSILE!"""
+		self.game.missiles.append(Missile(self.game, (self.x+self.width/2-Torpedo.width/2, self.y-20)))
+
 
 class Torpedo:
 	"""Those cool things the player fires."""
@@ -166,19 +207,34 @@ class Torpedo:
 		self.y=pos[1]
 		self.rect=pygame.Rect(self.x, self.y, Torpedo.width, Torpedo.height)
 	def update(self, events):
+		#update position
 		self.y-=Torpedo.speed
 		self.rect.y=self.y
+
+		#check for collision with an enemy
+		for enemy in self.game.enemies:
+			if pygame.Rect.colliderect(self.rect, enemy.rect): 
+				self.game.enemies.remove(enemy)
+				self.game.torpedos.remove(self)
+
 	def draw(self, camera):
 		camera.draw_rect(self.rect, LIGHTER_BLUE)
 
 class Missile:
 	"""Those nasty things Aliens shoot."""
-	def __init__(self, game):
+	width=20
+	height=40
+	speed=10
+	def __init__(self, game, pos):
 		self.game=game
+		self.x=pos[0]
+		self.y=pos[1]
+		self.rect=pygame.Rect(self.x, self.y, Missile.width, Missile.height)
 	def update(self, events):
-		pass
+		self.y+=Missile.speed
+		self.rect.y=self.y
 	def draw(self, camera):
-		pass
+		camera.draw_rect(self.rect, LIGHTER_RED)
 
 
 class Background:
