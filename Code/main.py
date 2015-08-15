@@ -10,7 +10,10 @@ from swarm_generator import SwarmGenerator
 from random import random
 
 """This main file holds the main game loop as well as all
-# of the basic classes"""
+of the basic classes."""
+
+# Note: some ascii art words have been added for easy reading in
+# Sublime text. Also for yolo purposes.
 
 pygame.init()
 
@@ -31,6 +34,16 @@ DISPLAYSURF = pygame.display.set_mode(screen_dimensions)
 pygame.display.set_caption("Showoff")
 EVENTS = []
 
+
+"""
+       _       __                   _        ____  
+      | |     / _|                 (_)      / /\ \ 
+    __| | ___| |_   _ __ ___   __ _ _ _ __ | |  | |
+   / _` |/ _ \  _| | '_ ` _ \ / _` | | '_ \| |  | |
+  | (_| |  __/ |   | | | | | | (_| | | | | | |  | |
+   \__,_|\___|_|   |_| |_| |_|\__,_|_|_| |_| |  | |
+                                            \_\/_/ 
+ """                                                                                  
 def main():
 	"""Starts the game."""
 	global game
@@ -49,6 +62,15 @@ def main():
 
 		FPSCLOCK.tick(FPS) # pause a few milliseconds (1/FPS)seconds
 
+"""
+   _____                  
+  / ____|                     
+ | |  __  __ _ _ __ ___   ___ 
+ | | |_ |/ _` | '_ ` _ \ / _ \
+ | |__| | (_| | | | | | |  __/
+  \_____|\__,_|_| |_| |_|\___|
+                                                  
+"""
 class Game:
 	"""Top of class hierarchy; the godly class."""
 	environment_speed=1
@@ -63,7 +85,11 @@ class Game:
 		self.camera=Camera(self, screen, (0,0))
 	def update(self, events):
 		"""Updates game state."""
+		for event in events:
+			if event.type==KEYDOWN and event.key==K_UP: Game.environment_speed=3
+			elif event.type==KEYUP and event.key==K_UP: Game.environment_speed=1
 		# call all the update methods
+		self.camera.update()
 		self.player.update(events)
 		for enemy in self.enemies:
 			enemy.update(events)
@@ -99,23 +125,55 @@ class Game:
 	def init_enemies(self):
 		self.enemies = SwarmGenerator.generate_swarm(0, self)
 
+"""
+  _____                               
+  / ____|                              
+ | |     __ _ _ __ ___   ___ _ __ __ _ 
+ | |    / _` | '_ ` _ \ / _ \ '__/ _` |
+ | |___| (_| | | | | | |  __/ | | (_| |
+  \_____\__,_|_| |_| |_|\___|_|  \__,_|
+                                       
+"""
 class Camera:
 	"""Should be utilized by any game object that wishes to draw itself"""
 	def __init__(self, game, screen, pos):
 		self.game=game
 		self.screen=screen
-		self.pos=pos
+		self.x=pos[0]
+		self.y=pos[1]
+		self.shake_offset=[0,0] # x, y
+		self.shaking_intensity=0 # starts w/ no shake
+	def update(self):
+		#print("Camera shake offset=="+str(self.shake_offset[0])+", "+str(self.shake_offset[1]))
+		if self.shaking_intensity > 0:
+			self.shake(self.shaking_intensity-1)
 	def blit_surface(self, surface, pos):
 		"""Blits a surface onto its own surface at new coordinates based
 		off given ones and its own."""
-		newx = pos[0] - self.pos[0]
-		newy = pos[1] - self.pos[1]
+		newx = pos[0] - self.x + self.shake_offset[0]
+		newy = pos[1] - self.y + self.shake_offset[1]
 		self.screen.blit(surface, (newx, newy))
 	def draw_rect(self, rect, color):
 		"""Just like blit_surface but for pygame.Rect."""
-		new_rect = pygame.Rect(rect.x-self.pos[0], rect.y-self.pos[1], rect.width, rect.height)
+		new_rect = pygame.Rect(rect.x-self.x + self.shake_offset[0], rect.y-self.y+self.shake_offset[1], rect.width, rect.height)
 		pygame.draw.rect(self.screen, color, new_rect)
+	def shake(self, intensity):
+		#print ("Camera shake w/ intensity of "+str(intensity))
+		self.shaking_intensity=intensity
+		self.shake_offset=[intensity, intensity]
+		for index in range(2): 
+			if random()>0.5: self.shake_offset[index]*=-1
 
+"""
+  _____  _                       
+ |  __ \| |                      
+ | |__) | | __ _ _   _  ___ _ __ 
+ |  ___/| |/ _` | | | |/ _ \ '__|
+ | |    | | (_| | |_| |  __/ |   
+ |_|    |_|\__,_|\__, |\___|_|   
+                  __/ |          
+                 |___/         
+"""
 class Player:
 	"""What the user controls."""
 	time_between_shots=10
@@ -179,6 +237,16 @@ class Player:
 		self.move_left=[False, False]
 		if self.move_right[1]: self.move_right[0]=True
 
+"""
+ ______                            
+ |  ____|                           
+ | |__   _ __   ___ _ __ ___  _   _ 
+ |  __| | '_ \ / _ \ '_ ` _ \| | | |
+ | |____| | | |  __/ | | | | | |_| |
+ |______|_| |_|\___|_| |_| |_|\__, |
+                               __/ |
+                              |___/ 
+"""
 class Enemy:
 	"""Generic Enemy"""
 	width=40
@@ -207,7 +275,16 @@ class Enemy:
 		"""FIRE ZE MISSILE!"""
 		self.game.missiles.append(Missile(self.game, (self.x+self.width/2-Torpedo.width/2, self.y-20)))
 
-
+"""
+ _______                        _       
+ |__   __|                      | |      
+    | | ___  _ __ _ __   ___  __| | ___  
+    | |/ _ \| '__| '_ \ / _ \/ _` |/ _ \ 
+    | | (_) | |  | |_) |  __/ (_| | (_) |
+    |_|\___/|_|  | .__/ \___|\__,_|\___/ 
+                 | |                     
+                 |_|                    
+"""
 class Torpedo:
 	"""Those cool things the player fires."""
 	height=20
@@ -228,10 +305,20 @@ class Torpedo:
 			if pygame.Rect.colliderect(self.rect, enemy.rect): 
 				self.game.enemies.remove(enemy)
 				self.game.torpedos.remove(self)
+				self.game.camera.shake(5)
 
 	def draw(self, camera):
 		camera.draw_rect(self.rect, LIGHTER_BLUE)
 
+"""
+ __  __ _         _ _      
+ |  \/  (_)       (_) |     
+ | \  / |_ ___ ___ _| | ___ 
+ | |\/| | / __/ __| | |/ _ \
+ | |  | | \__ \__ \ | |  __/
+ |_|  |_|_|___/___/_|_|\___|
+
+"""
 class Missile:
 	"""Those nasty things Aliens shoot."""
 	width=10
@@ -248,7 +335,16 @@ class Missile:
 	def draw(self, camera):
 		camera.draw_rect(self.rect, LIGHTER_RED)
 
-
+"""
+ ____             _                                   _ 
+ |  _ \           | |                                 | |
+ | |_) | __ _  ___| | ____ _ _ __ ___  _   _ _ __   __| |
+ |  _ < / _` |/ __| |/ / _` | '__/ _ \| | | | '_ \ / _` |
+ | |_) | (_| | (__|   < (_| | | | (_) | |_| | | | | (_| |
+ |____/ \__,_|\___|_|\_\__, |_|  \___/ \__,_|_| |_|\__,_|
+                        __/ |                            
+                       |___/                             
+"""
 class Background:
 	"""An intense changing Background."""
 	def __init__(self, game):
