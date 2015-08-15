@@ -6,6 +6,7 @@
 import pygame
 from pygame.locals import *
 from enemies import *
+from swarm_generator import SwarmGenerator
 from random import random
 
 """This main file holds the main game loop as well as all
@@ -17,6 +18,7 @@ pygame.init()
 BLUE = (0, 0, 255)
 LIGHTER_BLUE = (100, 100, 255)
 BLACK = (0, 0, 0)
+WHITE = (255, 255, 255)
 RED = (255, 0, 0)
 LIGHTER_RED = (255, 100, 100)
 
@@ -95,7 +97,7 @@ class Game:
 		pygame.display.update()
 
 	def init_enemies(self):
-		self.enemies.append(Enemy(self, (50, 50)))
+		self.enemies = SwarmGenerator.generate_swarm(0, self)
 
 class Camera:
 	"""Should be utilized by any game object that wishes to draw itself"""
@@ -116,17 +118,20 @@ class Camera:
 
 class Player:
 	"""What the user controls."""
+	time_between_shots=10
 	def __init__(self, game):
 		self.game=game
-		self.width=60
-		self.height=80
+		self.width=50
+		self.height=40
 		self.x=screen_dimensions[0]/2-self.width/2
 		self.y=600
-		self.side_to_side_speed = 5
+		self.side_to_side_speed = 7
+		self.shot_timer=Player.time_between_shots #@10==can shoot
 		self.rect=pygame.Rect(self.x, self.y, self.width, self.height)
 		self.move_right=[False, False] # first bool=being treated as pressed by game
 		self.move_left = [False, False] # second is being pressed at all ([False, True]="on wait list"
 										# this is all done to make controls more comfortable.
+		self.space_pressed=False
 	def update(self, events):
 		
 		# update event-related variables
@@ -134,10 +139,11 @@ class Player:
 			if event.type==KEYDOWN:
 				if event.key==K_RIGHT: self.right_pressed()
 				elif event.key==K_LEFT: self.left_pressed()
-				elif event.key==K_SPACE: self.fire()
+				elif event.key==K_SPACE: self.space_pressed=True
 			elif event.type==KEYUP:
 				if event.key==K_RIGHT: self.right_released()
 				elif event.key==K_LEFT: self.left_released()
+				elif event.key==K_SPACE: self.space_pressed=False
 
 		# update position
 		if self.move_right[0]: self.x += self.side_to_side_speed
@@ -145,6 +151,12 @@ class Player:
 		self.rect.x = self.x
 		self.rect.y = self.y
 
+		if self.space_pressed and self.shot_timer>=Player.time_between_shots:
+			self.fire()
+			self.shot_timer=0
+
+		#update shot timer
+		if self.shot_timer<Player.time_between_shots: self.shot_timer+=1
 
 
 	def draw(self, camera):
@@ -152,7 +164,7 @@ class Player:
 
 	def fire(self):
 		"""Fire ze TORPEDO!"""
-		self.game.torpedos.append(Torpedo(self.game, (self.x+self.width/2-Torpedo.width/2, self.y-20)))
+		self.game.torpedos.append(Torpedo(self.game, (self.x+self.width/2-Torpedo.width/2, self.y-5)))
 
 	def right_pressed(self):
 		self.move_right[1]=True
@@ -186,7 +198,7 @@ class Enemy:
 		self.rect.y=self.y
 
 		#fire missile.... maybe...
-		if random() > 0.98: self.fire()
+		if random() > 0.998: self.fire()
 
 	def draw(self, camera):
 		camera.draw_rect(self.rect, RED)
@@ -198,8 +210,8 @@ class Enemy:
 
 class Torpedo:
 	"""Those cool things the player fires."""
-	height=40
-	width=20
+	height=20
+	width=10
 	speed=10
 	def __init__(self, game, pos):
 		self.game=game
@@ -222,8 +234,8 @@ class Torpedo:
 
 class Missile:
 	"""Those nasty things Aliens shoot."""
-	width=20
-	height=40
+	width=10
+	height=20
 	speed=10
 	def __init__(self, game, pos):
 		self.game=game
@@ -242,10 +254,22 @@ class Background:
 	def __init__(self, game):
 		self.game=game
 		self.rect=pygame.Rect(0, 0, screen_dimensions[0], screen_dimensions[1])
+		self.stars=[] #array of pygame.Rects
 	def update(self, events):
-		pass
+		#create new star?
+		if random() > 0.75:
+			#print ("star created")
+			starx=random()*screen_dimensions[0]
+			self.stars.append(pygame.Rect(starx, 0, 2, 2))
+		#update star positions/ remove out of bounds ones
+		for star in self.stars:
+			star.y+=Game.environment_speed
+			if star.y > screen_dimensions[1]: self.stars.remove(star)
+
 	def draw(self, camera):
-		camera.draw_rect(self.rect, BLACK)
+		self.game.camera.screen.fill(BLACK)
+		for star in self.stars:
+			camera.draw_rect(star, WHITE)
 
 
 # Start game only if this is the module being run.
