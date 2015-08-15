@@ -4,6 +4,7 @@
 # All rights reserved.
 
 import pygame
+import sound
 from pygame.locals import *
 from enemies import *
 from swarm_generator import SwarmGenerator
@@ -251,6 +252,7 @@ class Enemy:
 	"""Generic Enemy"""
 	width=40
 	height=50
+	speed=1
 	def __init__(self, game, pos):
 		self.game=game
 		self.x=pos[0]
@@ -258,7 +260,7 @@ class Enemy:
 		self.rect=pygame.Rect(self.x, self.y, Enemy.width, Enemy.height)
 	def update(self, events):
 		#Update coordinates
-		self.y+=self.game.environment_speed
+		self.y+=Enemy.speed*self.game.environment_speed
 		#self.x......
 
 		#update rect
@@ -297,15 +299,16 @@ class Torpedo:
 		self.rect=pygame.Rect(self.x, self.y, Torpedo.width, Torpedo.height)
 	def update(self, events):
 		#update position
-		self.y-=Torpedo.speed
+		self.y-=Torpedo.speed-self.game.environment_speed
 		self.rect.y=self.y
 
 		#check for collision with an enemy
 		for enemy in self.game.enemies:
-			if pygame.Rect.colliderect(self.rect, enemy.rect): 
+			if pygame.Rect.colliderect(self.rect, enemy.rect): # IT'S A HIT!
 				self.game.enemies.remove(enemy)
 				self.game.torpedos.remove(self)
 				self.game.camera.shake(5)
+				sound.MySounds.play_explosion_sound()
 
 	def draw(self, camera):
 		camera.draw_rect(self.rect, LIGHTER_BLUE)
@@ -323,14 +326,14 @@ class Missile:
 	"""Those nasty things Aliens shoot."""
 	width=10
 	height=20
-	speed=10
+	speed=7
 	def __init__(self, game, pos):
 		self.game=game
 		self.x=pos[0]
 		self.y=pos[1]
 		self.rect=pygame.Rect(self.x, self.y, Missile.width, Missile.height)
 	def update(self, events):
-		self.y+=Missile.speed
+		self.y+=Missile.speed-self.game.environment_speed
 		self.rect.y=self.y
 	def draw(self, camera):
 		camera.draw_rect(self.rect, LIGHTER_RED)
