@@ -4,16 +4,16 @@
 # All rights reserved.
 
 import pygame
+import main
 from pygame.locals import *
 from random import random
-from main import *
 
 """This file will contain classes for every different kind of
 enemy, each derived from the generic Enemy class."""
 
 pygame.init()
 
-class Shooty(Enemy):
+class Shooty(main.Enemy):
 	"""Moves slower and shoots more than usual"""
 	def __init__(self, game, pos):
 		self.game=game
@@ -24,7 +24,7 @@ class Shooty(Enemy):
 	def draw(self, camera):
 		pass
 
-class Cloaky(Enemy):
+class Cloaky(main.Enemy):
 	"""Becomes almost invisible, then uncloacks in front of your face."""
 	def __init__(self, game, pos):
 		self.game=game
@@ -35,7 +35,7 @@ class Cloaky(Enemy):
 	def draw(self, camera):
 		pass
 
-class Lazy(Enemy):
+class Lazy(main.Enemy):
 	"""Stays in one place and shoots big lasers."""
 	def __init__(self, game, pos):
 		self.game=game
@@ -46,7 +46,7 @@ class Lazy(Enemy):
 	def draw(self, camera):
 		pass
 		
-class Zoomy(Enemy):
+class Zoomy(main.Enemy):
 	"""Faster than normal and goes in little squiggly motions."""
 	def __init__(self, game, pos):
 		self.game=game

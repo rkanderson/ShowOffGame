@@ -5,8 +5,9 @@
 
 import pygame
 import sound
+import particles
+#import enemies
 from pygame.locals import *
-from enemies import *
 from swarm_generator import SwarmGenerator
 from random import random
 
@@ -99,6 +100,7 @@ class Game:
 				self.restart_me=True
 		# call all the update methods
 		self.camera.update()
+		particles.ParticleManager.update()
 		if not self.player.exploded: self.player.update(events)
 		for enemy in self.enemies:
 			enemy.update(events)
@@ -123,6 +125,7 @@ class Game:
 		"""Draws itself on camera."""
 		# order of draws determines layers
 		self.background.draw(self.camera)
+		particles.ParticleManager.draw(self.camera)
 		for enemy in self.enemies:
 			enemy.draw(self.camera)
 		if not self.player.exploded: self.player.draw(self.camera)
@@ -244,6 +247,8 @@ class Player:
 		#spawn explosion at coordinates?
 		sound.MySounds.play_sound("player_explosion")
 		self.exploded=True
+		particles.ParticleManager.make_explosion((self.rect.centerx, self.rect.centery), 50)
+		self.game.camera.shake(20)
 
 	def fire(self):
 		"""Fire ze TORPEDO!"""
@@ -327,6 +332,7 @@ class Torpedo:
 		self.x=pos[0]
 		self.y=pos[1]
 		self.rect=pygame.Rect(self.x, self.y, Torpedo.width, Torpedo.height)
+		self.gone=False
 	def update(self, events):
 		#update position
 		self.y-=Torpedo.speed-self.game.environment_speed
@@ -339,14 +345,18 @@ class Torpedo:
 				self.game.torpedos.remove(self)
 				self.game.camera.shake(5)
 				sound.MySounds.play_explosion_sound()
+				particles.ParticleManager.make_explosion((self.rect.centerx, self.rect.centery), 20)
+				self.gone=True
 
 		#check for collision with a missile
-		for missile in self.game.missiles:
-			if pygame.Rect.colliderect(self.rect, missile.rect): # IT'S A HIT!
-				self.game.missiles.remove(missile)
-				self.game.torpedos.remove(self)
-				self.game.camera.shake(2)
-				sound.MySounds.play_explosion_sound()
+		if not self.gone:
+			for missile in self.game.missiles:
+				if pygame.Rect.colliderect(self.rect, missile.rect): # IT'S A HIT!
+					self.game.missiles.remove(missile)
+					self.game.torpedos.remove(self)
+					self.game.camera.shake(2)
+					sound.MySounds.play_explosion_sound()
+					particles.ParticleManager.make_explosion((self.rect.centerx, self.rect.centery), 10)
 
 	def draw(self, camera):
 		camera.draw_rect(self.rect, LIGHTER_BLUE)

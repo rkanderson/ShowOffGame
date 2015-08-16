@@ -6,7 +6,7 @@
 import pygame
 from pygame.locals import *
 import main
-from enemies import *
+#import enemies
 
 """This file holds the SwarmGeneartor class, whose static
 generate_swarm method will return an array of enemies based
