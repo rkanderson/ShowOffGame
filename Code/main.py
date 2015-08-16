@@ -50,7 +50,11 @@ def main():
 	global game
 	game = Game(DISPLAYSURF) # make a new Game object
 	running = True
-	while running: #<---Start of main game loop. 1 time around = 1 frame 
+	while running: #<---Start of main game loop. 1 time around = 1 frame
+
+		#Restart the game?
+		if game.restart_me: game = Game(DISPLAYSURF)
+
 		EVENTS = pygame.event.get() # update EVENTS
 
 		# See if there's any need to quit (red x button pressed)
@@ -84,14 +88,18 @@ class Game:
 		self.missiles=[]
 		self.background=Background(self)
 		self.camera=Camera(self, screen, (0,0))
+		self.game_over_img = pygame.image.load("sprites/game_over.png").convert_alpha()
+		self.restart_me=False # indicates if the game wants to be restarted (replaced by new one)
 	def update(self, events):
 		"""Updates game state."""
 		for event in events:
 			if event.type==KEYDOWN and event.key==K_UP: Game.environment_speed=3
 			elif event.type==KEYUP and event.key==K_UP: Game.environment_speed=1
+			elif event.type==KEYDOWN and event.key==K_SPACE and self.player.is_dead:
+				self.restart_me=True
 		# call all the update methods
 		self.camera.update()
-		self.player.update(events)
+		if not self.player.exploded: self.player.update(events)
 		for enemy in self.enemies:
 			enemy.update(events)
 		for torpedo in self.torpedos:
@@ -109,6 +117,7 @@ class Game:
 			if missile.y > screen_dimensions[1]:
 				self.missiles.remove(missile)
 				#print("Missile removed.")
+ 
 
 	def draw(self):
 		"""Draws itself on camera."""
@@ -116,11 +125,15 @@ class Game:
 		self.background.draw(self.camera)
 		for enemy in self.enemies:
 			enemy.draw(self.camera)
-		self.player.draw(self.camera)
+		if not self.player.exploded: self.player.draw(self.camera)
 		for missile in self.missiles:
 			missile.draw(self.camera)
 		for torpedo in self.torpedos:
 			torpedo.draw(self.camera)
+		
+		if self.player.is_dead:
+			self.camera.screen.blit(self.game_over_img, (0, 200))
+
 		pygame.display.update()
 
 	def init_enemies(self):
@@ -187,6 +200,8 @@ class Player:
 		self.side_to_side_speed = 7
 		self.shot_timer=Player.time_between_shots #@10==can shoot
 		self.rect=pygame.Rect(self.x, self.y, self.width, self.height)
+		self.is_dead=False
+		self.exploded=False
 		self.move_right=[False, False] # first bool=being treated as pressed by game
 		self.move_left = [False, False] # second is being pressed at all ([False, True]="on wait list"
 										# this is all done to make controls more comfortable.
@@ -207,6 +222,8 @@ class Player:
 		# update position
 		if self.move_right[0]: self.x += self.side_to_side_speed
 		elif self.move_left[0]: self.x -= self.side_to_side_speed
+		if self.x < 0: self.x=0
+		elif self.x + self.width > screen_dimensions[0]: self.x = screen_dimensions[0]-self.width
 		self.rect.x = self.x
 		self.rect.y = self.y
 
@@ -217,9 +234,16 @@ class Player:
 		#update shot timer
 		if self.shot_timer<Player.time_between_shots: self.shot_timer+=1
 
+		#if dead, explode
+		if self.is_dead: self.explode()
 
 	def draw(self, camera):
 		camera.draw_rect(self.rect, BLUE)
+
+	def explode(self):
+		#spawn explosion at coordinates?
+		sound.MySounds.play_sound("player_explosion")
+		self.exploded=True
 
 	def fire(self):
 		"""Fire ze TORPEDO!"""
@@ -270,8 +294,14 @@ class Enemy:
 		#fire missile.... maybe...
 		if random() > 0.998: self.fire()
 
+		self.check_for_player_collision()		
+
 	def draw(self, camera):
 		camera.draw_rect(self.rect, RED)
+
+	def check_for_player_collision(self):
+		if pygame.Rect.colliderect(self.rect, self.game.player.rect): #HIT the player!
+			self.game.player.is_dead=True #BOOM u dead
 
 	def fire(self):
 		"""FIRE ZE MISSILE!"""
@@ -310,6 +340,14 @@ class Torpedo:
 				self.game.camera.shake(5)
 				sound.MySounds.play_explosion_sound()
 
+		#check for collision with a missile
+		for missile in self.game.missiles:
+			if pygame.Rect.colliderect(self.rect, missile.rect): # IT'S A HIT!
+				self.game.missiles.remove(missile)
+				self.game.torpedos.remove(self)
+				self.game.camera.shake(2)
+				sound.MySounds.play_explosion_sound()
+
 	def draw(self, camera):
 		camera.draw_rect(self.rect, LIGHTER_BLUE)
 
@@ -333,8 +371,10 @@ class Missile:
 		self.y=pos[1]
 		self.rect=pygame.Rect(self.x, self.y, Missile.width, Missile.height)
 	def update(self, events):
-		self.y+=Missile.speed-self.game.environment_speed
+		self.y+=Missile.speed+self.game.environment_speed
 		self.rect.y=self.y
+		if pygame.Rect.colliderect(self.rect, self.game.player.rect): #HIT the player!
+			self.game.player.is_dead=True #BOOM u dead
 	def draw(self, camera):
 		camera.draw_rect(self.rect, LIGHTER_RED)
 
@@ -350,6 +390,7 @@ class Missile:
 """
 class Background:
 	"""An intense changing Background."""
+	star_speed = 1
 	def __init__(self, game):
 		self.game=game
 		self.rect=pygame.Rect(0, 0, screen_dimensions[0], screen_dimensions[1])
@@ -362,7 +403,7 @@ class Background:
 			self.stars.append(pygame.Rect(starx, 0, 2, 2))
 		#update star positions/ remove out of bounds ones
 		for star in self.stars:
-			star.y+=Game.environment_speed
+			star.y+=Background.star_speed*Game.environment_speed
 			if star.y > screen_dimensions[1]: self.stars.remove(star)
 
 	def draw(self, camera):

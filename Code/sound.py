@@ -17,6 +17,7 @@ class MySounds:
 	sound_dictionary['explosion3']=pygame.mixer.Sound("sounds/explosion3.wav")
 	sound_dictionary['explosion4']=pygame.mixer.Sound("sounds/explosion4.wav")
 	sound_dictionary['explosion5']=pygame.mixer.Sound("sounds/explosion5.wav")
+	sound_dictionary['player_explosion']=pygame.mixer.Sound("sounds/shoot down.wav")
 
 
 	@staticmethod
