@@ -5,8 +5,8 @@
 
 import pygame
 import random
-import main
 from pygame.locals import *
+import main
 
 """Holder of the ParticleManager static class, which will handle all particle effects."""
 
@@ -44,7 +44,8 @@ class ExplosionEffect:
 	def update(self):
 		for p in self.particles:
 			p.x += p.xs
-			p.y += p.ys
+			p.y += p.ys			
+
 			#remove particles who's lifespans are over
 			if self.timer>=p.lifespan: self.particles.remove(p)
 
@@ -54,7 +55,12 @@ class ExplosionEffect:
 		self.timer+=1 #tick tock.......
 	def draw(self, camera):
 		for p in self.particles:
-			camera.blit_surface(ExplosionEffect.explosion_particle_img, (p.x, p.y))
+			my_num = random.randint(1, 4)
+			particle_img = ExplosionEffect.explosion_particle_img
+			if my_num==2: particle_img = pygame.transform.rotate(particle_img, 90)
+			elif my_num==3: particle_img = pygame.transform.rotate(particle_img, 180)
+			elif my_num==4: particle_img = pygame.transform.rotate(particle_img, 270)
+			camera.blit_surface(particle_img, (p.x, p.y))
 
 class ParticleData:
 	"""Represents data for a generic particle."""

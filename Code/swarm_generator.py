@@ -5,8 +5,7 @@
 
 import pygame
 from pygame.locals import *
-import main
-#import enemies
+import enemies
 
 """This file holds the SwarmGeneartor class, whose static
 generate_swarm method will return an array of enemies based
@@ -18,22 +17,22 @@ class SwarmGenerator:
 	@staticmethod
 	def generate_swarm(level, game):
 		swarm = []
+		print("Creating swarm id"+str(level))
 		if level==0:
 			for row in range(3):
 				for col in range(10):
-					swarm.append(main.Enemy(game, (50+col*main.Enemy.width, row*main.Enemy.height)))
+					swarm.append(enemies.Normal(game, (50+col*enemies.Enemy.width, row*enemies.Enemy.height)))
 		elif level==1:
-			pass
-		elif level==3:
-			pass
-		elif level==4:
-			pass
-		elif level==5:
-			pass
-		elif level==6:
-			pass
+			for row in range(2):
+				for col in range(10):
+					swarm.append(enemies.Normal(game, (50+col*enemies.Enemy.width, row*enemies.Enemy.height)))
+			swarm.append(enemies.Shooty(game, (50, -50)))
+		elif level==2:
+			for row in range(1):
+				for col in range(10):
+					swarm.append(enemies.Normal(game, (50+col*enemies.Enemy.width, row*enemies.Enemy.height)))
 		else:
-			print("@swarm_generator: I don't know what to give for that number.")
+			print("@swarm_generator: I don't know what to give for the number "+str(level))
 
 		#shift swarm to exist just outside of screen
 		max_y = 0

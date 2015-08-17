@@ -6,7 +6,6 @@
 import pygame
 import sound
 import particles
-#import enemies
 from pygame.locals import *
 from swarm_generator import SwarmGenerator
 from random import random
@@ -26,6 +25,7 @@ BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
 RED = (255, 0, 0)
 LIGHTER_RED = (255, 100, 100)
+GREEN = (0, 255, 0)
 
 
 
@@ -80,23 +80,29 @@ def main():
 class Game:
 	"""Top of class hierarchy; the godly class."""
 	environment_speed=1
+	number_of_waves=3
+	time_between_waves=90
 	def __init__(self, screen):
 		"""Initializes a new Game object."""
 		self.player=Player(self)
 		self.enemies=[]
-		self.init_enemies()
+		self.swarm_number=0
+		self.init_enemies(self.swarm_number)
+		self.between_swarm_timer=0 #@main.time_between_waves can call init_enemies again.
 		self.torpedos=[]
 		self.missiles=[]
 		self.background=Background(self)
 		self.camera=Camera(self, screen, (0,0))
 		self.game_over_img = pygame.image.load("sprites/game_over.png").convert_alpha()
-		self.restart_me=False # indicates if the game wants to be restarted (replaced by new one)
+		self.you_win_img = pygame.image.load("sprites/you_win.png").convert_alpha()
+		self.game_won=False
+		self.restart_me=False # @Game.time_between_waves indicates if the game wants to be restarted (replaced by new one)
 	def update(self, events):
 		"""Updates game state."""
 		for event in events:
-			if event.type==KEYDOWN and event.key==K_UP: Game.environment_speed=3
+			if event.type==KEYDOWN and event.key==K_UP: Game.environment_speed=10
 			elif event.type==KEYUP and event.key==K_UP: Game.environment_speed=1
-			elif event.type==KEYDOWN and event.key==K_SPACE and self.player.is_dead:
+			elif event.type==KEYDOWN and event.key==K_SPACE and (self.player.is_dead or self.game_won):
 				self.restart_me=True
 		# call all the update methods
 		self.camera.update()
@@ -119,13 +125,19 @@ class Game:
 			if missile.y > screen_dimensions[1]:
 				self.missiles.remove(missile)
 				#print("Missile removed.")
- 
+ 		
+ 		if len(self.enemies)==0:
+ 			if self.swarm_number==Game.number_of_waves-1: self.game_won=True
+ 			elif self.between_swarm_timer==Game.time_between_waves:
+ 				self.between_swarm_timer=0
+ 				self.swarm_number+=1
+ 				self.init_enemies(self.swarm_number)
+ 			else: self.between_swarm_timer+=1
 
 	def draw(self):
 		"""Draws itself on camera."""
 		# order of draws determines layers
 		self.background.draw(self.camera)
-		particles.ParticleManager.draw(self.camera)
 		for enemy in self.enemies:
 			enemy.draw(self.camera)
 		if not self.player.exploded: self.player.draw(self.camera)
@@ -133,14 +145,17 @@ class Game:
 			missile.draw(self.camera)
 		for torpedo in self.torpedos:
 			torpedo.draw(self.camera)
-		
+		particles.ParticleManager.draw(self.camera)
 		if self.player.is_dead:
 			self.camera.screen.blit(self.game_over_img, (0, 200))
+		elif self.game_won:
+			self.camera.screen.blit(self.you_win_img, (0, 200))
 
 		pygame.display.update()
 
-	def init_enemies(self):
-		self.enemies = SwarmGenerator.generate_swarm(0, self)
+	def init_enemies(self, swarm_number):
+		self.enemies = SwarmGenerator.generate_swarm(swarm_number, self)
+		sound.MySounds.play_sound("swoosh")
 
 """
   _____                               
@@ -253,6 +268,7 @@ class Player:
 	def fire(self):
 		"""Fire ze TORPEDO!"""
 		self.game.torpedos.append(Torpedo(self.game, (self.x+self.width/2-Torpedo.width/2, self.y-5)))
+		sound.MySounds.play_sound('shoot')
 
 	def right_pressed(self):
 		self.move_right[1]=True
@@ -267,50 +283,6 @@ class Player:
 		self.move_left=[False, False]
 		if self.move_right[1]: self.move_right[0]=True
 
-"""
- ______                            
- |  ____|                           
- | |__   _ __   ___ _ __ ___  _   _ 
- |  __| | '_ \ / _ \ '_ ` _ \| | | |
- | |____| | | |  __/ | | | | | |_| |
- |______|_| |_|\___|_| |_| |_|\__, |
-                               __/ |
-                              |___/ 
-"""
-class Enemy:
-	"""Generic Enemy"""
-	width=40
-	height=50
-	speed=1
-	def __init__(self, game, pos):
-		self.game=game
-		self.x=pos[0]
-		self.y=pos[1]
-		self.rect=pygame.Rect(self.x, self.y, Enemy.width, Enemy.height)
-	def update(self, events):
-		#Update coordinates
-		self.y+=Enemy.speed*self.game.environment_speed
-		#self.x......
-
-		#update rect
-		self.rect.x=self.x
-		self.rect.y=self.y
-
-		#fire missile.... maybe...
-		if random() > 0.998: self.fire()
-
-		self.check_for_player_collision()		
-
-	def draw(self, camera):
-		camera.draw_rect(self.rect, RED)
-
-	def check_for_player_collision(self):
-		if pygame.Rect.colliderect(self.rect, self.game.player.rect): #HIT the player!
-			self.game.player.is_dead=True #BOOM u dead
-
-	def fire(self):
-		"""FIRE ZE MISSILE!"""
-		self.game.missiles.append(Missile(self.game, (self.x+self.width/2-Torpedo.width/2, self.y-20)))
 
 """
  _______                        _       
@@ -345,7 +317,7 @@ class Torpedo:
 				self.game.torpedos.remove(self)
 				self.game.camera.shake(5)
 				sound.MySounds.play_explosion_sound()
-				particles.ParticleManager.make_explosion((self.rect.centerx, self.rect.centery), 20)
+				particles.ParticleManager.make_explosion((enemy.rect.centerx, enemy.rect.centery), 20)
 				self.gone=True
 
 		#check for collision with a missile
@@ -385,6 +357,7 @@ class Missile:
 		self.rect.y=self.y
 		if pygame.Rect.colliderect(self.rect, self.game.player.rect): #HIT the player!
 			self.game.player.is_dead=True #BOOM u dead
+			self.game.missiles.remove(self)
 	def draw(self, camera):
 		camera.draw_rect(self.rect, LIGHTER_RED)
 
