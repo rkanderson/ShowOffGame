@@ -33,6 +33,8 @@ class Enemy:
 		self.x=pos[0]
 		self.y=pos[1]
 		self.surface=surface
+		self.width=surface.get_width()
+		self.height=surface.get_height()
 		self.rect=self.surface.get_rect(x=self.x, y=self.y)
 	def update(self, events):
 		self.update_position()
@@ -64,7 +66,7 @@ class Enemy:
 
 	def fire(self):
 		"""FIRE ZE MISSILE!"""
-		self.game.missiles.append(main.Missile(self.game, (self.x+self.width/2-main.Torpedo.width/2, self.y-20)))
+		self.game.missiles.append(main.Missile(self.game, (self.x+self.width/2-main.Missile.width/2, self.y+self.height/2)))
 
 class Normal(Enemy):
 	def __init__(self, game, pos):
@@ -76,7 +78,7 @@ class Shooty(Enemy):
 	"""Moves slower and shoots more than usual"""
 	speed=1
 	def __init__(self, game, pos):
-		self.surface = pygame.Surface((50, 50))
+		self.surface = pygame.Surface((40, 40))
 		self.surface.fill(main.BLUE)
 		Enemy.__init__(self, game, pos, self.surface)
 
